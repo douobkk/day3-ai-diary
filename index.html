@@ -212,8 +212,8 @@
       <h3 class="voice-subtitle">
         <span style="font-size: 1.2rem;">🎙️</span> 음성으로 입력하기
       </h3>
-      <button class="voice-btn" type="button">
-        녹음 시작
+      <button class="voice-btn" id="voiceBtn" type="button">
+        음성으로 입력하기
       </button>
     </div>
 
@@ -229,6 +229,77 @@
     const today = new Date();
     const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
     dateElement.textContent = today.toLocaleDateString('ko-KR', options);
+
+    // 음성 인식 (Web Speech API) 설정
+    const voiceBtn = document.getElementById('voiceBtn');
+    const diaryInput = document.getElementById('diaryInput');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isRecognizing = false;
+    let finalTranscript = '';
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = true; // 끊기지 않고 계속 인식
+      recognition.interimResults = true; // 말하는 도중의 중간 결과도 표시
+      recognition.lang = 'ko-KR'; // 한국어 인식
+
+      recognition.onstart = () => {
+        isRecognizing = true;
+        voiceBtn.textContent = '음성으로 인식중..';
+        voiceBtn.style.animation = 'pulse 1.5s infinite';
+        
+        // 기존에 입력된 텍스트를 유지하고 이어서 작성
+        finalTranscript = diaryInput.value;
+        if (finalTranscript.length > 0 && !finalTranscript.endsWith(' ') && !finalTranscript.endsWith('\n')) {
+          finalTranscript += ' ';
+        }
+      };
+
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        diaryInput.value = finalTranscript + interimTranscript;
+      };
+
+      recognition.onerror = (event) => {
+        console.error('음성 인식 오류:', event.error);
+        stopRecognition();
+      };
+
+      recognition.onend = () => {
+        stopRecognition();
+      };
+
+      function stopRecognition() {
+        isRecognizing = false;
+        voiceBtn.textContent = '음성으로 입력하기';
+        voiceBtn.style.animation = 'none';
+      }
+
+      voiceBtn.addEventListener('click', () => {
+        if (isRecognizing) {
+          recognition.stop();
+        } else {
+          try {
+            recognition.start();
+          } catch(e) {
+            console.error(e);
+          }
+        }
+      });
+    } else {
+      voiceBtn.addEventListener('click', () => {
+        alert('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge 브라우저를 이용해주세요.');
+      });
+    }
   </script>
 </body>
 </html>
