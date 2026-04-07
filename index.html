@@ -341,9 +341,46 @@
       });
     }
 
-    // AI API 연동 (Vercel Serverless Function 호출)
+    // AI API 연동 (Vercel 배포 시 /api/gemini, 로컬 시 .env 직접 읽기)
     const submitBtn = document.getElementById('submitBtn');
     const aiResponseBox = document.getElementById('aiResponseBox');
+
+    // Gemini API를 Vercel 백엔드(/api/gemini)를 통해 호출
+    async function callViaVercel(text) {
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '서버 오류');
+      return data.reply;
+    }
+
+    // Gemini API를 .env에서 키를 읽어 직접 호출 (로컬용)
+    async function callViaEnv(text) {
+      const envResponse = await fetch('.env');
+      if (!envResponse.ok) throw new Error('.env 파일을 읽을 수 없습니다.');
+      const envText = await envResponse.text();
+      const apiKeyLine = envText.split('\n').find(line => line.startsWith('GEMINI_API_KEY='));
+      if (!apiKeyLine) throw new Error('GEMINI_API_KEY가 .env 파일에 없습니다.');
+      const apiKey = apiKeyLine.split('=')[1].trim();
+
+      const systemPrompt = "너는 심리상담가야. 사용자가 작성한 일기내용을 읽고, 따뜻한 응원의 메시지를 2~3문장으로 작성해줘. 답변 형식은 반드시 '감정:[요약된감정]\\n\\n[응원메시지]' 와 같이 줄바꿈 해서 보여줘.";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: `[System Instruction: ${systemPrompt}]\n\n사용자 일기: ${text}` }] }],
+          generationConfig: { temperature: 0.7 }
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'Gemini API 오류');
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 생성할 수 없습니다.";
+    }
 
     submitBtn.addEventListener('click', async () => {
       const text = diaryInput.value.trim();
@@ -353,32 +390,24 @@
         return;
       }
 
-      // 로딩 상태 처리
       submitBtn.disabled = true;
       submitBtn.textContent = '분석중... ⏳';
       aiResponseBox.innerHTML = '<span style="color: #64748b;">AI가 열심히 생각하고 있어요...</span>';
 
       try {
-        const response = await fetch('/api/gemini', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: text })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // 정답 세팅 (서버에서 받아온 형식대로 출력)
-          aiResponseBox.innerHTML = data.reply.replace(/\ng/, '<br>').replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
-        } else {
-          console.error(data);
-          aiResponseBox.innerHTML = `⚠️ 통신 오류가 발생했습니다.<br>- Vercel 설정에 <b>GEMINI_API_KEY</b> 환경변수가 입력되었는지 확인하세요.<br>- 에러 내용: ${data.error || '알 수 없는 오류'}`;
+        let aiText;
+        try {
+          // 1차: Vercel 백엔드(/api/gemini) 시도
+          aiText = await callViaVercel(text);
+        } catch (e) {
+          // 2차: 로컬 .env 방식으로 폴백
+          console.log('Vercel API 실패, 로컬 .env로 시도:', e.message);
+          aiText = await callViaEnv(text);
         }
+        aiResponseBox.innerHTML = aiText.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
       } catch (error) {
         console.error('API Error:', error);
-        aiResponseBox.innerHTML = `⚠️ 서버와 연결할 수 없거나 백엔드 주소 오류입니다.<br>오류: ${error.message}`;
+        aiResponseBox.innerHTML = `⚠️ AI 응답을 가져올 수 없습니다.<br>오류: ${error.message}`;
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = '✨ 분석 요청하기';
