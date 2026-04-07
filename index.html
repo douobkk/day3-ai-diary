@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 감정일기</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg-color: #f8fafc;
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: var(--text-main);
+    }
+
+    .diary-container {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      width: 100%;
+      max-width: 600px;
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .title-section {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .title-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      display: inline-block;
+      animation: gentle-bounce 3s infinite ease-in-out;
+    }
+
+    @keyframes gentle-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .date-text {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    .input-section {
+      margin-bottom: 28px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+      font-family: inherit;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--text-main);
+      resize: vertical;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+
+    textarea::placeholder {
+      color: #94a3b8;
+    }
+
+    .voice-btn-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .voice-subtitle {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .voice-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border-radius: 99px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .voice-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    }
+
+    .voice-btn:active {
+      transform: translateY(0);
+    }
+
+    .ai-response-box {
+      background-color: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      min-height: 100px;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+      position: relative;
+    }
+
+    .ai-response-box::before {
+      content: 'AI Answer';
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      background: linear-gradient(to right, #3b82f6, #06b6d4);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .pulse-animation {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      animation: pulse 1.5s infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="diary-container">
+    
+    <div class="title-section">
+      <span class="title-icon">📝</span>
+      <h1>오늘의 하루는 어땟나요?</h1>
+      <div class="date-text" id="currentDate"></div>
+    </div>
+
+    <div class="input-section">
+      <textarea id="diaryInput" placeholder="오늘 있었던 일, 느꼈던 감정들을 자유롭게 적어보세요..."></textarea>
+    </div>
+
+    <div class="voice-btn-wrap">
+      <h3 class="voice-subtitle">
+        <span style="font-size: 1.2rem;">🎙️</span> 음성으로 입력하기
+      </h3>
+      <button class="voice-btn" type="button">
+        녹음 시작
+      </button>
+    </div>
+
+    <div class="ai-response-box">
+      여기에 AI의 답변이 표시됩니다.
+    </div>
+
+  </div>
+
+  <script>
+    // 오늘의 날짜 표시
+    const dateElement = document.getElementById('currentDate');
+    const today = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    dateElement.textContent = today.toLocaleDateString('ko-KR', options);
+  </script>
+</body>
+</html>
